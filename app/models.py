@@ -313,6 +313,26 @@ class Categories(UserMixin, PaginatedAPIMixin, db.Model):
         return '<Category {}>'.format(self.category_name)
 
 
+class Brands(UserMixin, PaginatedAPIMixin, db.Model):
+    brand_id = db.Column(db.Integer, primary_key=True)
+    brand_name = db.Column(db.String(255), index=True)
+
+    def from_dict(self, data, new_brand=False):
+        for field in ['brand_name']:
+            if field in data:
+                setattr(self, field, data[field])
+
+    def to_dict(self):
+        data = {
+            'brand_id': self.brand_id,
+            'brand_name': self.brand_name
+        }
+        return data
+
+    def __repr__(self):
+        return '<Brand {}>'.format(self.brand_name)
+
+
 class Products(UserMixin, PaginatedAPIMixin, db.Model):
     product_id = db.Column(db.Integer, primary_key=True)
     product_name = db.Column(db.String(255))
@@ -349,26 +369,6 @@ class Stocks(UserMixin, PaginatedAPIMixin, db.Model):
     store_id = db.Column(db.Integer, primary_key=True)
     product_id = db.Column(db.Integer, db.ForeignKey('Products.product_id'))
     quantity = db.Column(db.Integer)
-
-
-class Brands(UserMixin, PaginatedAPIMixin, db.Model):
-    brand_id = db.Column(db.Integer, primary_key=True)
-    brand_name = db.Column(db.String(255), index=True)
-
-    def from_dict(self, data, new_brand=False):
-        for field in ['brand_name']:
-            if field in data:
-                setattr(self, field, data[field])
-
-    def to_dict(self):
-        data = {
-            'brand_id': self.brand_id,
-            'brand_name': self.brand_name
-        }
-        return data
-
-    def __repr__(self):
-        return '<Brand {}>'.format(self.brand_name)
 
 
 class Stores(UserMixin, PaginatedAPIMixin, db.Model):
