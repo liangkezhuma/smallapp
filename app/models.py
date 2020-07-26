@@ -294,6 +294,7 @@ class Task(db.Model):
 
 
 class Categories(UserMixin, PaginatedAPIMixin, db.Model):
+    __tablename__ = 'categories'
     category_id = db.Column(db.Integer, primary_key=True)
     category_name = db.Column(db.String(255), index=True)
 
@@ -314,6 +315,7 @@ class Categories(UserMixin, PaginatedAPIMixin, db.Model):
 
 
 class Brands(UserMixin, PaginatedAPIMixin, db.Model):
+    __tablename__ = 'brands'
     brand_id = db.Column(db.Integer, primary_key=True)
     brand_name = db.Column(db.String(255), index=True)
 
@@ -334,11 +336,12 @@ class Brands(UserMixin, PaginatedAPIMixin, db.Model):
 
 
 class Products(UserMixin, PaginatedAPIMixin, db.Model):
+    __tablename__ = 'products'
     product_id = db.Column(db.Integer, primary_key=True)
     product_name = db.Column(db.String(255))
-    brand_id = db.Column(db.Integer, db.ForeignKey('Brands.brand_id'))
+    brand_id = db.Column(db.Integer, db.ForeignKey('brands.brand_id'))
     category_id = db.Column(
-        db.Integer, db.ForeignKey('Categories.category_id'))
+        db.Integer, db.ForeignKey('categories.category_id'))
     model_year = db.Column(db.Integer)
     list_price = db.Column(db.Float)
 
@@ -357,7 +360,7 @@ class Products(UserMixin, PaginatedAPIMixin, db.Model):
             'brand_id': self.brand_id,
             'category_id': self.category_id,
             'model_year': self.model_year,
-            'list_price ': self.list_price
+            'list_price': self.list_price
         }
         return data
 
@@ -366,12 +369,14 @@ class Products(UserMixin, PaginatedAPIMixin, db.Model):
 
 
 class Stocks(UserMixin, PaginatedAPIMixin, db.Model):
+    __tablename__ = 'stocks'
     store_id = db.Column(db.Integer, primary_key=True)
-    product_id = db.Column(db.Integer, db.ForeignKey('Products.product_id'))
+    product_id = db.Column(db.Integer, db.ForeignKey('products.product_id'))
     quantity = db.Column(db.Integer)
 
 
 class Stores(UserMixin, PaginatedAPIMixin, db.Model):
+    __tablename__ = 'stores'
     store_id = db.Column(db.Integer, primary_key=True)
     store_name = db.Column(db.String(255))
     phone = db.Column(db.String(25))
@@ -381,7 +386,7 @@ class Stores(UserMixin, PaginatedAPIMixin, db.Model):
     state = db.Column(db.String(10))
     zip_code = db.Column(db.String(10))
 
-    def from_dict(self, data, new_brand=False):
+    def from_dict(self, data, new_store=False):
         for field in [
                 'store_name', 'phone', 'email', 'street', 'city',
                 'state', 'zip_code']:
@@ -406,17 +411,20 @@ class Stores(UserMixin, PaginatedAPIMixin, db.Model):
 
 
 class Orders(UserMixin, PaginatedAPIMixin, db.Model):
+    __tablename__ = 'orders'
     order_id = db.Column(db.Integer, primary_key=True)
-    customer_id = db.Column(db.Integer, db.ForeignKey('Users.id'))
+    customer_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     # Order status: 1 = Pending; 2 = Processing; 3 = Rejected; 4 = Completed
     order_status = db.Column(db.Integer)
     order_date = db.Column(db.DateTime, default=datetime.utcnow)
     required_date = db.Column(db.DateTime, default=datetime.utcnow)
     shipped_date = db.Column(db.DateTime, default=datetime.utcnow)
-    store_id = db.Column(db.Integer, db.ForeignKey('Stores.store_id'))
-    staff_id = db.Column(db.Integer, db.ForeignKey('Users.id'))
+    store_id = db.Column(db.Integer, db.ForeignKey('stores.store_id'))
+    staff_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    order_items = db.relationship(
+        'Order_items', backref='product', lazy='dynamic')
 
-    def from_dict(self, data, new_brand=False):
+    def from_dict(self, data, new_order=False):
         for field in [
                 'customer_id', 'order_status', 'order_date',
                 'required_date', 'shipped_date', 'store_id', 'staff_id'
@@ -433,7 +441,8 @@ class Orders(UserMixin, PaginatedAPIMixin, db.Model):
             'required_date': self.required_date,
             'shipped_date': self.shipped_date,
             'store_id': self.store_id,
-            'staff_id': self.staff_id
+            'staff_id': self.staff_id,
+            'order_items': [item.to_dict() for item in self.order_items]
         }
         return data
 
@@ -442,18 +451,19 @@ class Orders(UserMixin, PaginatedAPIMixin, db.Model):
 
 
 class Order_items(UserMixin, PaginatedAPIMixin, db.Model):
+    __tablename__ = 'order_items'
     order_id = db.Column(
-        db.Integer, db.ForeignKey('Orders.order_id'), primary_key=True)
+        db.Integer, db.ForeignKey('orders.order_id'), primary_key=True)
     item_id = db.Column(db.Integer, primary_key=True)
-    product_id = db.Column(db.Integer, db.ForeignKey('Products.product_id'))
+    product_id = db.Column(db.Integer, db.ForeignKey('products.product_id'))
     quantity = db.Column(db.Integer)
     list_price = db.Column(db.Integer)
     discount = db.Column(db.Integer)
-    order = db.relationship("Orders", back_populates="Order_items")
+    Orders = db.relationship("Orders", back_populates="order_items")
 
-    def from_dict(self, data, new_brand=False):
+    def from_dict(self, data, new_item=False):
         for field in [
-                'item_id', 'product_id', 'quantity', 'list_price',
+                'product_id', 'quantity', 'list_price',
                 'discount', 'order']:
             if field in data:
                 setattr(self, field, data[field])
@@ -465,8 +475,7 @@ class Order_items(UserMixin, PaginatedAPIMixin, db.Model):
             'product_id': self.product_id,
             'quantity': self.quantity,
             'list_price': self.list_price,
-            'discount': self.discount,
-            'order': self.order
+            'discount': self.discount
         }
         return data
 
@@ -474,5 +483,5 @@ class Order_items(UserMixin, PaginatedAPIMixin, db.Model):
         return '<Brand {}>'.format(self.brand_name)
 
 
-Orders.order_items = db.relationship(
-    "Order_items", order_by=Order_items.item_id, back_populates="user")
+# Orders.order_items = db.relationship(
+#     "Order_items", order_by=Order_items.item_id, back_populates="order_items")
