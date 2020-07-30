@@ -53,6 +53,8 @@ def update_order(order_id):
         order.from_dict(data, new_order=False)
     if 'order_items' in data:
         for item in data['order_items']:
+            if 'item_id' not in item:
+                bad_request('must include item_id')
             order_item = Order_items.query.get_or_404(
                 (order.order_id, item['item_id']))
             order_item.from_dict(item, new_item=False)
