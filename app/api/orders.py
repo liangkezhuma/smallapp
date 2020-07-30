@@ -49,10 +49,13 @@ def get_orders():
 def update_order(order_id):
     order = Orders.query.get_or_404(order_id)
     data = request.get_json() or {}
-    if 'order_name' in data and Orders.query.filter_by(
-            order_name=data['order_name']).first():
-        return bad_request('please use a different order_name')
-    order.from_dict(data, new_order=False)
+    if 'order_status' in data:
+        order.from_dict(data, new_order=False)
+    if 'order_items' in data:
+        for item in data['order_items']:
+            order_item = Order_items.query.get_or_404(
+                (order.order_id, item['item_id']))
+            order_item.from_dict(item, new_item=False)
     db.session.commit()
     return jsonify(order.to_dict())
 
