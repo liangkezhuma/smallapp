@@ -291,3 +291,197 @@ class Task(db.Model):
     def get_progress(self):
         job = self.get_rq_job()
         return job.meta.get('progress', 0) if job is not None else 100
+
+
+class Categories(UserMixin, PaginatedAPIMixin, db.Model):
+    __tablename__ = 'categories'
+    category_id = db.Column(db.Integer, primary_key=True)
+    category_name = db.Column(db.String(255), index=True)
+
+    def from_dict(self, data, new_category=False):
+        for field in ['category_name']:
+            if field in data:
+                setattr(self, field, data[field])
+
+    def to_dict(self):
+        data = {
+            'category_id': self.category_id,
+            'category_name': self.category_name
+        }
+        return data
+
+    def __repr__(self):
+        return '<Category {}>'.format(self.category_name)
+
+
+class Brands(UserMixin, PaginatedAPIMixin, db.Model):
+    __tablename__ = 'brands'
+    brand_id = db.Column(db.Integer, primary_key=True)
+    brand_name = db.Column(db.String(255), index=True)
+
+    def from_dict(self, data, new_brand=False):
+        for field in ['brand_name']:
+            if field in data:
+                setattr(self, field, data[field])
+
+    def to_dict(self):
+        data = {
+            'brand_id': self.brand_id,
+            'brand_name': self.brand_name
+        }
+        return data
+
+    def __repr__(self):
+        return '<Brand {}>'.format(self.brand_name)
+
+
+class Products(UserMixin, PaginatedAPIMixin, db.Model):
+    __tablename__ = 'products'
+    product_id = db.Column(db.Integer, primary_key=True)
+    product_name = db.Column(db.String(255))
+    brand_id = db.Column(db.Integer, db.ForeignKey('brands.brand_id'))
+    category_id = db.Column(
+        db.Integer, db.ForeignKey('categories.category_id'))
+    model_year = db.Column(db.Integer)
+    list_price = db.Column(db.Float)
+
+    def from_dict(self, data, new_product=False):
+        for field in [
+                'product_id', 'product_name',
+                'brand_id', 'category_id', 'model_year', 'list_price'
+                ]:
+            if field in data:
+                setattr(self, field, data[field])
+
+    def to_dict(self):
+        data = {
+            'product_id': self.product_id,
+            'product_name': self.product_name,
+            'brand_id': self.brand_id,
+            'category_id': self.category_id,
+            'model_year': self.model_year,
+            'list_price': self.list_price
+        }
+        return data
+
+    def __repr__(self):
+        return '<Product {}>'.format(self.product_name)
+
+
+class Stocks(UserMixin, PaginatedAPIMixin, db.Model):
+    __tablename__ = 'stocks'
+    store_id = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.product_id'))
+    quantity = db.Column(db.Integer)
+
+
+class Stores(UserMixin, PaginatedAPIMixin, db.Model):
+    __tablename__ = 'stores'
+    store_id = db.Column(db.Integer, primary_key=True)
+    store_name = db.Column(db.String(255))
+    phone = db.Column(db.String(25))
+    email = db.Column(db.String(255))
+    street = db.Column(db.String(255))
+    city = db.Column(db.String(255))
+    state = db.Column(db.String(10))
+    zip_code = db.Column(db.String(10))
+
+    def from_dict(self, data, new_store=False):
+        for field in [
+                'store_name', 'phone', 'email', 'street', 'city',
+                'state', 'zip_code']:
+            if field in data:
+                setattr(self, field, data[field])
+
+    def to_dict(self):
+        data = {
+            'store_id': self.store_id,
+            'store_name': self.store_name,
+            'phone': self.phone,
+            'email': self.email,
+            'street': self.street,
+            'city': self.city,
+            'state': self.state,
+            'zip_code': self.zip_code
+        }
+        return data
+
+    def __repr__(self):
+        return '<Store {}>'.format(self.store_name)
+
+
+class Orders(UserMixin, PaginatedAPIMixin, db.Model):
+    __tablename__ = 'orders'
+    order_id = db.Column(db.Integer, primary_key=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    # Order status: 1 = Pending; 2 = Processing; 3 = Rejected; 4 = Completed
+    order_status = db.Column(db.Integer)
+    order_date = db.Column(db.DateTime, default=datetime.utcnow)
+    required_date = db.Column(db.DateTime, default=datetime.utcnow)
+    shipped_date = db.Column(db.DateTime, default=datetime.utcnow)
+    store_id = db.Column(db.Integer, db.ForeignKey('stores.store_id'))
+    staff_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    order_items = db.relationship(
+        'Order_items', backref='product', lazy='dynamic')
+
+    def from_dict(self, data, new_order=False):
+        for field in [
+                'customer_id', 'order_status', 'order_date',
+                'required_date', 'shipped_date', 'store_id', 'staff_id'
+                ]:
+            if field in data:
+                setattr(self, field, data[field])
+
+    def to_dict(self):
+        data = {
+            'order_id': self.order_id,
+            'customer_id': self.customer_id,
+            'order_status': self.order_status,
+            'order_date': self.order_date,
+            'required_date': self.required_date,
+            'shipped_date': self.shipped_date,
+            'store_id': self.store_id,
+            'staff_id': self.staff_id,
+            'order_items': [item.to_dict() for item in self.order_items]
+        }
+        return data
+
+    def __repr__(self):
+        return '<Order {}>'.format(self.order_id)
+
+
+class Order_items(UserMixin, PaginatedAPIMixin, db.Model):
+    __tablename__ = 'order_items'
+    order_id = db.Column(
+        db.Integer, db.ForeignKey('orders.order_id'), primary_key=True)
+    item_id = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.product_id'))
+    quantity = db.Column(db.Integer)
+    list_price = db.Column(db.Integer)
+    discount = db.Column(db.Integer)
+    Orders = db.relationship("Orders", back_populates="order_items")
+
+    def from_dict(self, data, new_item=False):
+        for field in [
+                'product_id', 'quantity', 'list_price',
+                'discount', 'order']:
+            if field in data:
+                setattr(self, field, data[field])
+
+    def to_dict(self):
+        data = {
+            'order_id': self.order_id,
+            'item_id': self.item_id,
+            'product_id': self.product_id,
+            'quantity': self.quantity,
+            'list_price': self.list_price,
+            'discount': self.discount
+        }
+        return data
+
+    def __repr__(self):
+        return '<Brand {}>'.format(self.brand_name)
+
+
+# Orders.order_items = db.relationship(
+#     "Order_items", order_by=Order_items.item_id, back_populates="order_items")
