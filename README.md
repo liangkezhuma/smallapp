@@ -8,4 +8,5 @@ docker run --name mysql -d -e MYSQL_RANDOM_ROOT_PASSWORD=yes \
     -e MYSQL_DATABASE=smallapp -e MYSQL_USER=smallapp \
     -e MYSQL_PASSWORD=ly119811 \
     mysql/mysql-server:8.0
+#confilct at this line
 
